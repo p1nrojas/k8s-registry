@@ -1,0 +1,87 @@
+
+# moving some files to master to run our playbook
+
+- hosts: "{{ cluster_name }}_registry"
+
+  become: true
+
+  pre_tasks:
+
+    - name: creating cluster cfg directory
+      file:
+        path: cfg/{{ cluster_name }}
+        state: directory
+      delegate_to: 127.0.0.1
+      become: false
+    
+    - set_fact:
+        registry_hostname: "{{ registry_hostname_configured }}"
+      when: registry_hostname_configured is defined
+
+    - set_fact:
+        registry_hostname: "{{ ansible_default_ipv4['address'] }}"
+      when: registry_hostname_configured is not defined
+
+    - name: Save registry_hostname
+      shell: "echo registry_hostname{{ ':' }} {{ registry_hostname }} > cfg/{{ cluster_name }}/registry_hostname.yml"
+      delegate_to: 127.0.0.1
+      become: false
+ 
+  tasks:
+
+    - name: Pull facts on hypervisor
+      action: setup
+
+    - name: Install epel-release repo
+      yum: name=epel-release state=present
+
+    - name: Install some other packages
+      yum:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - httpd
+        - httpd-tools
+        - python-pip
+
+    - name: Install passlib
+      shell: 'pip install passlib' 
+
+    - name: install docker composer
+      shell: "{{ item }}"
+      with_items:
+        - "curl -L https://github.com/docker/compose/releases/download/1.8.0/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose"
+        - 'chmod +x /usr/local/bin/docker-compose'
+
+# installing registry
+
+- hosts: "{{ cluster_name }}_registry"
+
+  become: true
+
+  roles:
+
+    - role: registry_create
+      tags:
+        - registry
+
+# testing registry
+
+- hosts: "{{ cluster_name }}_nodes"
+
+  become: true
+
+  pre_tasks:
+
+    - name: Read registry_hostname from file
+      include_vars: cfg/{{ cluster_name }}/registry_hostname.yml
+  
+  tasks:
+
+    - name: trying access to registry
+      shell: curl -k https://p1nrojas:p1nrojas@docker.sdn40r8.lab/v2/
+      register: curl_test
+
+    - debug:
+        var: curl_test
+

@@ -1,0 +1,38 @@
+---
+
+- name: Create directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0755
+  with_items:
+    - '/root/docker-registry'
+    - '/root/docker-registry/nginx'
+    - '/root/docker-registry/data'
+  
+- name: Copy docker-compose.yml
+  template:
+    src: "docker-compose.yml.j2"
+    dest: "/root/docker-registry/docker-compose.yml"
+
+- name: Copy registry.conf
+  template:
+    src: "registry.conf.j2"
+    dest: "/root/docker-registry/nginx/registry.conf"
+
+- name: Create credentials http
+  htpasswd:
+    path: /etc/nginx/conf.d/registry.password
+    name: '{{ registry_user }}'
+    password: '{{ registry_password }}'
+
+- name: create self-signed certificates
+  command: openssl req -new -nodes -x509 -subj "/C=US/ST=Oregon/L=Portland/O=IT/CN={{ inventory_hostname }}" -days 3650 -keyout ./domain.key -out ./domain.crt -extensions v3_ca creates=./domain.crt
+  args:
+    chdir: /root/docker-registry/nginx 
+
+- name: run docker composer
+  shell: 'docker-compose up &'
+  args:
+    chdir: /root/docker-registry
+

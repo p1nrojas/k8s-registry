@@ -1,0 +1,6 @@
+# Check if everything is ok
+ansible nuage_k8s_master -i k8s-hosts -m ping
+ansible nuage_k8s -i k8s-hosts -m ping -e cluter_name=nuage_k8s
+
+# Run playbook
+ansible-playbook -i k8s-hosts -e cluster_name=nuage_k8s k8s-registry-create.yml
