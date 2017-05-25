@@ -22,7 +22,7 @@
 
 - name: Create credentials http
   htpasswd:
-    path: /etc/nginx/conf.d/registry.password
+    path: /root/docker-registry/nginx/registry.password
     name: '{{ registry_user }}'
     password: '{{ registry_password }}'
 
@@ -31,8 +31,4 @@
   args:
     chdir: /root/docker-registry/nginx 
 
-- name: run docker composer
-  shell: 'docker-compose up &'
-  args:
-    chdir: /root/docker-registry
 

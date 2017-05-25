@@ -47,6 +47,9 @@
     - name: Install passlib
       shell: 'pip install passlib' 
 
+    - name: Install docker-composer python 1.9.0
+      shell: 'pip install docker-compose==1.9.0' 
+
     - name: install docker composer
       shell: "{{ item }}"
       with_items:
@@ -67,16 +70,30 @@
 
 # testing registry
 
-- hosts: "{{ cluster_name }}_nodes"
+- hosts: "{{ cluster_name }}_registry"
 
   become: true
 
-  pre_tasks:
+  tasks:
+
+    - name: docker-composer
+      docker_service:
+        project_src: /root/docker-registry
+        state: absent
+
+    - name: docker-composer
+      docker_service:
+        project_src: /root/docker-registry
+        state: present
+
+- hosts: "{{ cluster_name }}_node"
+
+  become: true
+
+  tasks:
 
     - name: Read registry_hostname from file
       include_vars: cfg/{{ cluster_name }}/registry_hostname.yml
-  
-  tasks:
 
     - name: trying access to registry
       shell: curl -k https://p1nrojas:p1nrojas@docker.sdn40r8.lab/v2/
@@ -84,4 +101,3 @@
 
     - debug:
         var: curl_test
-

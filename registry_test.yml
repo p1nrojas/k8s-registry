@@ -1,0 +1,28 @@
+# testing registry
+
+- hosts: "{{ cluster_name }}_registry"
+
+  become: true
+
+  tasks:
+    
+    - name: docker-composer
+      docker_service:
+        project_src: /root/docker-registry
+        state: present
+
+- hosts: "{{ cluster_name }}_node"
+
+  become: true
+
+  tasks:
+
+    - name: Read registry_hostname from file
+      include_vars: cfg/{{ cluster_name }}/registry_hostname.yml
+
+    - name: trying access to registry
+      shell: curl -k https://p1nrojas:p1nrojas@docker.sdn40r8.lab/v2/
+      register: curl_test
+
+    - debug:
+        var: curl_test

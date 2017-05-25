@@ -4,7 +4,7 @@ upstream docker-registry {
  
 server {
   listen 443;
-  server_name registry.nuage.lab;
+  server_name {{ inventory_hostname }};
  
   # SSL
    ssl on;
