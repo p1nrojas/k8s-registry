@@ -15,15 +15,20 @@
       become: false
     
     - set_fact:
-        registry_hostname: "{{ registry_hostname_configured }}"
-      when: registry_hostname_configured is defined
-
-    - set_fact:
-        registry_hostname: "{{ ansible_default_ipv4['address'] }}"
-      when: registry_hostname_configured is not defined
+        registry_hostname: "{{ inventory_hostname }}"
 
     - name: Save registry_hostname
       shell: "echo registry_hostname{{ ':' }} {{ registry_hostname }} > cfg/{{ cluster_name }}/registry_hostname.yml"
+      delegate_to: 127.0.0.1
+      become: false
+
+    - name: Save registry_user
+      shell: "echo registry_user{{ ':' }} {{ registry_user }} > cfg/{{ cluster_name }}/registry_user.yml"
+      delegate_to: 127.0.0.1
+      become: false
+
+    - name: Save registry_password
+      shell: "echo registry_password{{ ':' }} {{ registry_password }} > cfg/{{ cluster_name }}/registry_password.yml"
       delegate_to: 127.0.0.1
       become: false
  
@@ -43,12 +48,19 @@
         - httpd
         - httpd-tools
         - python-pip
+        - libselinux-python
 
-    - name: Install passlib
-      shell: 'pip install passlib' 
+    - name: Install python libraries
+      shell: "{{ item }}"
+      with_items:
+        - 'pip install passlib' 
+        - 'pip install docker-compose==1.9.0'
 
-    - name: Install docker-composer python 1.9.0
-      shell: 'pip install docker-compose==1.9.0' 
+    - selinux:
+        state: disabled
+
+    - name: setenforce 0
+      command: setenforce 0 
 
     - name: install docker composer
       shell: "{{ item }}"
@@ -100,4 +112,4 @@
       register: curl_test
 
     - debug:
-        var: curl_test
+        var: curl_test.stdout

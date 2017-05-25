@@ -1,0 +1,78 @@
+# adding registry to k8s nodes
+
+- hosts: 
+    - "{{ cluster_name }}_node"
+    - "{{ cluster_name }}_master"
+
+  become: true
+
+  tasks:
+
+    - name: Read registry_hostname from file
+      include_vars: cfg/{{ cluster_name }}/registry_hostname.yml
+
+    - name: Read registry_user from file
+      include_vars: cfg/{{ cluster_name }}/registry_user.yml
+
+    - name: Read registry_password from file
+      include_vars: cfg/{{ cluster_name }}/registry_password.yml
+
+    - name: Install some other packages
+      yum:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - python-pip
+        - libselinux-python
+
+    - name: Install python libraries
+      shell: "{{ item }}"
+      with_items:
+        - 'pip install passlib'
+        - 'pip install docker-compose==1.9.0'
+
+    - selinux:
+        state: disabled
+
+    - name: setenforce 0
+      command: setenforce 0
+
+    - name:  configuring file /etc/sysconfig/docker
+      lineinfile:
+        dest: /etc/sysconfig/docker
+        regexp: "OPTIONS=.*"
+        line: OPTIONS='--selinux-enabled --log-driver=journald --insecure-registry {{ registry_hostname }}'
+
+    - name: restarting docker service
+      service: 
+        name: docker
+        state: restarted
+
+    - docker_login:
+        registry: "{{ registry_hostname }}"
+        username: "{{ registry_user }}"
+        password: "{{ registry_password }}"
+
+# adding registry to k8s
+
+- hosts: "{{ cluster_name }}_master"
+
+  become: true
+
+  tasks:
+
+    - name: Read registry_hostname from file
+      include_vars: cfg/{{ cluster_name }}/registry_hostname.yml
+
+    - name: Read registry_user from file
+      include_vars: cfg/{{ cluster_name }}/registry_user.yml
+
+    - name: Read registry_password from file
+      include_vars: cfg/{{ cluster_name }}/registry_password.yml
+
+    - name: Add registry thru kubectl
+      command: kubectl create secret docker-registry {{ registry_key_name }} --docker-server={{ registry_hostname }} --docker-username={{ registry_user }} --docker-password={{ registry_password }} --docker-email=pinrojas@gmail.com
+      register: kube_output
+
+    - debug:
+        var: kube_output.stdout
